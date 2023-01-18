@@ -1,18 +1,91 @@
 import { ethers } from "hardhat";
 
 async function main() {
-  const currentTimestampInSeconds = Math.round(Date.now() / 1000);
-  const ONE_YEAR_IN_SECS = 365 * 24 * 60 * 60;
-  const unlockTime = currentTimestampInSeconds + ONE_YEAR_IN_SECS;
 
-  const lockedAmount = ethers.utils.parseEther("1");
+  /*********************Deploy Forwarder*************************** */
+  const Forwarder = await ethers.getContractFactory("Forwarder");
+  const forwarder = await Forwarder.deploy();
+ 
+   await forwarder.deployed();
+ 
+   console.log(`Forwarder contract is deployed to ${forwarder.address}`);
 
-  const Lock = await ethers.getContractFactory("Lock");
-  const lock = await Lock.deploy(unlockTime, { value: lockedAmount });
+  /*********************Deploy TWRegistry*************************** */
+  const TWRegistry = await ethers.getContractFactory("TWRegistry");
+  const tWRegistry = await TWRegistry.deploy(forwarder.address);
+ 
+  await tWRegistry.deployed();
 
-  await lock.deployed();
+  console.log(`TWRegistry contract is deployed to ${tWRegistry.address}`);
 
-  console.log(`Lock with 1 ETH and unlock timestamp ${unlockTime} deployed to ${lock.address}`);
+  /*********************Deploy TWFactory*************************** */
+  const TWFactory = await ethers.getContractFactory("TWFactory");
+  const tWFactory = await TWFactory.deploy(forwarder.address, tWRegistry.address);
+  
+  await tWFactory.deployed();
+  console.log(`TWFactory  contract is deployed to ${tWFactory.address}`);
+
+
+  /***********************Twregistry grant role***************************** */
+  const tWRegistryInteract = TWRegistry.attach(tWRegistry.address);
+  const opetratorRole = tWRegistryInteract.callStatic.OPERATOR_ROLE();
+
+  const granntRole = await tWRegistryInteract.grantRole(opetratorRole,tWFactory.address)
+
+  console.log("role grantes: ", granntRole)
+
+
+  /*********************Deploy WETH*************************** */
+  const WETH = await ethers.getContractFactory("WETH");
+  const wETH = await WETH.deploy();
+ 
+  await wETH.deployed();
+
+  console.log(` WETH contract is deployed to ${wETH.address}`);
+
+
+    /*********************Deploy Marketplace*************************** */
+  const Marketplace = await ethers.getContractFactory("Marketplace");
+  const marketplace = await Marketplace.deploy(wETH.address);
+ 
+  await marketplace.deployed();
+
+  console.log(`Marketplace contract is deployed to ${marketplace.address}`);
+
+
+
+  /*********************Deploy byteGetter*************************** */
+  const byteGetter = await ethers.getContractFactory("byteGenerator");
+  const ByteGetter = await byteGetter.deploy(forwarder.address, tWRegistry.address);
+  
+  await ByteGetter.deployed();
+  console.log(`TWFactory  contract is deployed to ${ByteGetter.address}`);
+ 
+  //varaiables
+
+  const [deployer] = await ethers.getSigners();
+  const contractURi = "ipfs://QmSSQxQQGynYeYiWVvmz7Nq9VnazX9uHbeQBiwjtMiguSF/04";
+  const platformFee = 500; //5%
+   /*************INTeract*********** */
+  const ByteGetterInteract = byteGetter.attach(ByteGetter.address);
+  const getBytes = await ByteGetterInteract.callStatic.getBytes("MArketplace");
+
+  const getEncodeDate = await ByteGetterInteract.callStatic.getEncodeCall(deployer.address, contractURi, [forwarder.address], deployer.address, platformFee)
+
+    
+
+  /*****************************Twfactory interact************************* */
+  const TWFactoryInteract = TWFactory.attach(tWFactory.address)
+  const addImplementation = await TWFactoryInteract.addImplementation(marketplace.address);
+  console.log("addImplementation succesfull", addImplementation);
+
+  const deployProxy = await TWFactoryInteract.deployProxy(getBytes, getEncodeDate);
+
+  console.log("The NFT Marketplace, ", deployProxy)
+
+
+
+
 }
 
 // We recommend this pattern to be able to use async/await everywhere
