@@ -91,8 +91,92 @@ async function main() {
 const NftMarketplace =  await ethers.getContractFactory("Marketplace")
 const nftMarketplace = NftMarketplace.attach(proxyMarketplaceAddress)
 
-const uri = await nftMarketplace.callStatic.contractURI()
-console.log("contract uri: ", uri)
+
+/************************** CreateDummy NFT and TestToken******************************** */
+const TestNft = await ethers.getContractFactory("TestNft");
+const testNft = await TestNft.deploy();
+
+await testNft.deployed();
+
+console.log(`Marketplace contract is deployed to ${testNft.address}`);
+
+/*********************************** */
+const TestToken = await ethers.getContractFactory("TestToken");
+const testToken = await TestToken.deploy();
+
+await testToken.deployed();
+
+console.log(`Marketplace contract is deployed to ${testToken.address}`);
+
+
+/************************Minting and approval************* */
+const TestNftInteract = TestNft.attach(testNft.address)
+              await TestNftInteract.safeMint(tester1.address)
+const mint = await TestNftInteract.safeMint(tester3.address)
+
+                    await TestNftInteract.connect(tester1).setApprovalForAll(proxyMarketplaceAddress, true)
+const nftApproval = await TestNftInteract.connect(tester3).setApprovalForAll(proxyMarketplaceAddress, true)
+
+
+console.log("approval succesfull ", nftApproval)
+
+/******************** */
+const amt = ethers.utils.parseEther("40")
+const TestTokenInteract = TestToken.attach(testToken.address)
+
+const mintToken = await TestTokenInteract.mint(tester2.address, amt)
+
+
+const tokenApproval = await TestTokenInteract.connect(tester2).approve(proxyMarketplaceAddress, amt)
+
+console.log("token approval ", tokenApproval)
+
+
+
+/*********************Create Listing************************* */
+const listingParams = {
+  assetContract: testNft.address,
+  tokenId: 0,
+  startTime: Date.now(),
+  secondsUntilEndTime: 6400,
+  quantityToList: 1,
+  currencyToAccept: testToken.address,
+  reservePricePerToken: 0,
+  buyoutPricePerToken: ethers.utils.parseEther("10"),
+  listingType: 0
+}
+//const listparam = ["0xddaAd340b0f1Ef65169Ae5E41A8b10776a75482d", 3, 1674329275, 6400, 1, "0xD4Fc541236927E2EAf8F27606bD7309C1Fc2cbee", 200, 0, 0];
+const c8list = await nftMarketplace.connect(tester1).createListing(listingParams)
+console.log("create listen successfull ", c8list)
+
+/***********************Buy************************ */
+        // define the parameters for buying the listing
+        const listingId = 0;
+        const buyFor = tester2.address;
+        const quantityToBuy = 1;
+        const currency = testToken.address;
+        const totalPrice = ethers.utils.parseEther("10"); 
+
+const buyNft = await nftMarketplace.connect(tester2).buy(listingId, buyFor,quantityToBuy, currency, totalPrice)
+
+console.log("buy successful ", buyNft)
+
+
+/**************************Check balance********************/
+
+const tester1bal = await TestTokenInteract.connect(tester1).callStatic.balanceOf(tester1.address)
+
+console.log("balace of ", tester1bal)
+//should get the money 
+
+/*********** */
+
+const nftbal = await TestNftInteract.connect(tester2).callStatic.balanceOf(tester2.address)
+const nftowner = await TestNftInteract.connect(tester2).callStatic.ownerOf(0)
+//balance should increase by 1 and nftowner should be testr2 addr
+
+console.log("balance of tester 2: ", nftbal)
+console.log("nft owner of token id 0: ", nftowner)
 }
 
 // We recommend this pattern to be able to use async/await everywhere
