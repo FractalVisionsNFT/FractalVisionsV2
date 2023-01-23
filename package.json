@@ -6,6 +6,8 @@
   "dependencies": {
     "@nomicfoundation/hardhat-network-helpers": "^1.0.7",
     "@openzeppelin/contracts": "^4.8.1",
-    "@openzeppelin/contracts-upgradeable": "^4.8.1"
+    "@openzeppelin/contracts-upgradeable": "^4.8.1",
+    "@openzeppelin/hardhat-upgrades": "^1.22.1",
+    "dotenv": "^16.0.3"
   }
 }
