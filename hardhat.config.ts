@@ -24,7 +24,11 @@ module.exports = {
     }
   },
   settings: {
-    optimizer: {enabled: true},
+    optimizer: {
+      enabled: true,
+      runs: 200
+    }
+    
   },
   etherscan: {
     apiKey: process.env.POLYGONSCAN_API_KEY
