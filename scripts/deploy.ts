@@ -56,10 +56,10 @@ async function main() {
 
   /*********************Deploy byteGetter*************************** */
   const byteGetter = await ethers.getContractFactory("byteGenerator");
-  const ByteGetter = await byteGetter.deploy(forwarder.address, tWRegistry.address);
+  const ByteGetter = await byteGetter.deploy();
   
   await ByteGetter.deployed();
-  console.log(`TWFactory  contract is deployed to ${ByteGetter.address}`);
+  console.log(`ByteGetter contract is deployed to ${ByteGetter.address}`);
  
   //varaiables
 
@@ -68,7 +68,7 @@ async function main() {
   const platformFee = 500; //5%
    /*************INTeract*********** */
   const ByteGetterInteract = byteGetter.attach(ByteGetter.address);
-  const getBytes = await ByteGetterInteract.callStatic.getBytes("MArketplace");
+  const getBytes = await ByteGetterInteract.callStatic.getBytes("Marketplace");
 
   const getEncodeDate = await ByteGetterInteract.callStatic.getEncodeCall(deployer.address, contractURi, [forwarder.address], deployer.address, platformFee)
 
@@ -88,11 +88,11 @@ async function main() {
   console.log("Marketplace proxy address: ", proxyMarketplaceAddress) 
 
 /************************Interact with the marketrplace******************** */
-const NftMarketplace =  await ethers.getContractFactory("Marketplace")
-const nftMarketplace = NftMarketplace.attach(proxyMarketplaceAddress)
+// const NftMarketplace =  await ethers.getContractFactory("Marketplace")
+// const nftMarketplace = NftMarketplace.attach(proxyMarketplaceAddress)
 
-const uri = await nftMarketplace.callStatic.contractURI()
-console.log("contract uri: ", uri)
+// const uri = await nftMarketplace.callStatic.contractURI()
+// console.log("contract uri: ", uri)
 }
 
 // We recommend this pattern to be able to use async/await everywhere

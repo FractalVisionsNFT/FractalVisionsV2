@@ -194,11 +194,13 @@ describe("Marketplace", () => {
       //expect that the buyer get the nft
     expect(NFT.ownerOf(1).to.be.equal(buyer.address))
 
+   // 5% - platfrm fee. - 5% of 1000 = 50
+   //1000 - 50
     //expext that the seller gets it's money
-    expect(Erc20Token.balanceOf())
+    expect((await Erc20Token.balanceOf(buyer.address))).to.be.equal(950)
 
     //check that the admin get it's own commision
-    expect(Erc20Token.balanceOf())
+    expect(Erc20Token.balanceOf(defaultAdmin)).to.be.equal(50)
 
     const listing = await marketplace.listings(listingId);
 

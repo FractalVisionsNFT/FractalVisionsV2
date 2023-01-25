@@ -20,15 +20,15 @@ module.exports = {
     hardhat: {
       forking: {
         url: `https://eth-mainnet.alchemyapi.io/v2/${process.env.key}`,   
-      }
+      },
+      allowUnlimitedContractSize: true
     }
   },
   settings: {
     optimizer: {
       enabled: true,
       runs: 200
-    }
-    
+    } 
   },
   etherscan: {
     apiKey: process.env.POLYGONSCAN_API_KEY
