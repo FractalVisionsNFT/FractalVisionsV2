@@ -87,6 +87,8 @@ async function main() {
 
   console.log("Marketplace proxy address: ", proxyMarketplaceAddress) 
 
+  const marketplaceAddress = proxyMarketplaceAddress[1]
+
 /************************Interact with the marketrplace******************** */
 const NftMarketplace =  await ethers.getContractFactory("Marketplace")
 const nftMarketplace = NftMarketplace.attach(proxyMarketplaceAddress)

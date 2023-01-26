@@ -79,20 +79,22 @@ async function main() {
   const addImplementation = await TWFactoryInteract.addImplementation(marketplace.address);
   console.log("addImplementation succesfull", addImplementation);
 
-  const deployProxy = await TWFactoryInteract.deployProxy(getBytes, getEncodeDate);
+  const deployProxy = await TWFactoryInteract.callStatic.deployProxy(getBytes, getEncodeDate);
 
-  const result = await deployProxy.wait()
-  //@ts-ignore
-  const proxyMarketplaceAddress = result.events[0].topics;
+  //  const result = await deployProxy.wait()
+  // //@ts-ignore
+  // const proxyMarketplaceAddress = result.events[0].topics;
 
-  console.log("Marketplace proxy address: ", proxyMarketplaceAddress) 
+  // console.log("Marketplace proxy address: ", result) 
+
+  console.log("Marketplace proxy log: ", deployProxy) 
 
 /************************Interact with the marketrplace******************** */
-// const NftMarketplace =  await ethers.getContractFactory("Marketplace")
-// const nftMarketplace = NftMarketplace.attach(proxyMarketplaceAddress)
+const NftMarketplace =  await ethers.getContractFactory("Marketplace")
+const nftMarketplace = NftMarketplace.attach(deployProxy)
 
-// const uri = await nftMarketplace.callStatic.contractURI()
-// console.log("contract uri: ", uri)
+const uri = await nftMarketplace.callStatic.getPlatformFeeInfo()
+console.log("contract uri: ", uri)
 }
 
 // We recommend this pattern to be able to use async/await everywhere
