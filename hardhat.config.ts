@@ -18,9 +18,9 @@ module.exports = {
       accounts: [ACCOUNT_PRIVATE_KEY],
     },
     hardhat: {
-      forking: {
-        url: `https://eth-mainnet.alchemyapi.io/v2/${process.env.key}`,   
-      },
+      // forking: {
+      //   url: `https://eth-mainnet.alchemyapi.io/v2/${process.env.key}`,   
+      // },
       allowUnlimitedContractSize: true
     }
   },

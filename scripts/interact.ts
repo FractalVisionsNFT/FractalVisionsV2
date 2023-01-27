@@ -11,7 +11,7 @@ async function main( ) {
     const listeraddress = "0x12896191de42EF8388f2892Ab76b9a728189260A";
     await helpers.impersonateAccount(listeraddress);
     const impersonatedListerAddress = await ethers.getSigner(listeraddress); 
-    
+
     const nftOwner = "0xad9E66676C51EaF7609eC736A4F87aFd3072C75d"
     await helpers.impersonateAccount(nftOwner);
     const Impersonatednftowner = await ethers.getSigner(nftOwner)
@@ -23,6 +23,7 @@ async function main( ) {
     const nft = await ethers.getContractFactory("deployedNFTAbi")
     const nftaccount =  nft.attach(nftContractAddress);
     nftaccount.
+  
     
 
     /****************************get totalListings*************************** */
