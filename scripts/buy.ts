@@ -129,7 +129,6 @@ const TestTokenInteract = TestToken.attach(testToken.address)
 
 const mintToken = await TestTokenInteract.mint(tester2.address, amt)
 
-
 const tokenApproval = await TestTokenInteract.connect(tester2).approve(marketplaceAddress, amt)
 
 console.log("token approval ", tokenApproval)
@@ -137,11 +136,15 @@ console.log("token approval ", tokenApproval)
 
 
 /*********************Create Listing************************* */
+const currentTime = (await ethers.provider.getBlock("latest")).timestamp
+console.log("latest ", currentTime)
+
+
 const listingParams = {
   assetContract: testNft.address,
   tokenId: 0,
-  startTime: Date.now(),
-  secondsUntilEndTime: 1 * 24 * 60 * 60,
+  startTime: currentTime,
+  secondsUntilEndTime: 1 * 24 * 60 * 60, //1 day
   quantityToList: 1,
   currencyToAccept: testToken.address,
   reservePricePerToken: 0,
@@ -152,21 +155,13 @@ const listingParams = {
 const c8list = await nftMarketplace.connect(tester1).createListing(listingParams)
 console.log("create listen successfull ", c8list)
 
-// getting timestamp
-// const blockNumBefore = await ethers.provider.getBlockNumber();
-// const blockBefore = await ethers.provider.getBlock(blockNumBefore);
-// const timestampBefore = blockBefore.timestamp;
-const timeStamp = (await ethers.provider.getBlock("latest")).timestamp
-console.log("latest ", timeStamp)
-
-console.log("NOW DATE", Date.now())
-console.log("End time", Date.now() + (1 * 24 * 60 * 60)) //1674816781
 
 /***********************  Get Listing************************************* */
 const listingres = await nftMarketplace.listings(0)
 // const getListing = await listingres.wait()
 
 console.log("get listing ", listingres)
+
 
 
 /***********************Buy************************ */
@@ -186,19 +181,21 @@ console.log("buy successful ", buyNft)
 
 
 /**************************Check balance********************/
+console.log("all adrresses ", deployer.address, " tester1",  tester1.address, "tester2", tester2.address)
 
 const tester1bal = await TestTokenInteract.connect(tester1).callStatic.balanceOf(tester1.address)
 
-console.log("balace of ", tester1bal)
+console.log("balace of Lister", tester1bal)
 //should get the money 
 
 /*********** */
-
+const platformFeeRecipientbal = await TestTokenInteract.connect(deployer).callStatic.balanceOf(deployer.address)
 const nftbal = await TestNftInteract.connect(tester2).callStatic.balanceOf(tester2.address)
 const nftowner = await TestNftInteract.connect(tester2).callStatic.ownerOf(0)
 //balance should increase by 1 and nftowner should be testr2 addr
 
-console.log("balance of tester 2: ", nftbal)
+console.log("Platfrom Fee Recipient Balance ", platformFeeRecipientbal)
+console.log("NFT balance of tester 2: ", nftbal)
 console.log("nft owner of token id 0: ", nftowner)
 }
 
