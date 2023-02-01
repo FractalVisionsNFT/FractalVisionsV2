@@ -7,14 +7,15 @@ require('@openzeppelin/hardhat-upgrades');
 require("dotenv").config({ path: ".env" });
 
 const ALCHEMY_mumbai_API_KEY_URL = process.env.ALCHEMY_mumbai_API_KEY_URL;
+const ALCHEMY_OPtimism_API_KEY_URL = process.env.ALCHEMY_OPtimism_API_KEY_URL
 //contract address key
 const ACCOUNT_PRIVATE_KEY = process.env.ACCOUNT_PRIVATE_KEY;
 
 module.exports = {
   solidity: "0.8.17",
   networks: {
-    mumbai: {
-      url: ALCHEMY_mumbai_API_KEY_URL,
+    optimism: {
+      url: ALCHEMY_OPtimism_API_KEY_URL,
       accounts: [ACCOUNT_PRIVATE_KEY],
     },
     hardhat: {
