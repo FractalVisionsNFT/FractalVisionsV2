@@ -216,6 +216,7 @@ await tWRegistryInteract.grantRole(opetratorRole,tWFactory.address)
     expect(listing.endTime).to.equal(newStartTime + newEndTime);
   });
 
+
   it("should cancel a direct listing", async () => {
     const { marketplaceAddress, deployer, testNft, testToken, tester1, tester2,currentTime, nftMarketplace} = await loadFixture(deployMarketplace);
 
@@ -256,128 +257,212 @@ await tWRegistryInteract.grantRole(opetratorRole,tWFactory.address)
     expect(listing.assetContract).to.eq("0x0000000000000000000000000000000000000000");
   });
 
-//   /// @dev Lets an account buy a given quantity of tokens from a listing.
-//   it("should buy a direct listing", async () => {
-//     const { marketplace, defaultAdmin, NFT, tokenID , _startTime, _secondsUntilEndTime, _nativeTokenWrapper, buyer} = await loadFixture(deployMarketplace);
 
-//     const listingParams = {
-//         assetContract: NFT.Address,
-//         tokenId: tokenID,
-//         quantityToList: 1,
-//         startTime: _startTime,
-//         secondsUntilEndTime: _secondsUntilEndTime,
-//         currencyToAccept: _nativeTokenWrapper,
-//         reservePricePerToken: 100,
-//         buyoutPricePerToken: 1000,
-//         listingType: 0,
-//       }
-//      await marketplace.createListing(listingParams);
+  /// @dev Lets an account buy a given quantity of tokens from a listing.
+  it("should buy a direct listing", async () => {
+    const { marketplaceAddress, deployer, testNft, testToken, tester1, tester2,currentTime, nftMarketplace} = await loadFixture(deployMarketplace);
 
-//         // define the parameters for buying the listing
-//            const listingId = 1;
-//            const buyFor = buyer.address;
-//            const quantityToBuy = 1;
-//            const currency = _nativeTokenWrapper;
-//            const totalPrice =1000; 
+    /************************Minting and approval************* */
+    const TestNft =  await ethers.getContractFactory("TestNft")
+    const TestNftInteract = TestNft.attach(testNft.address)
+
+    const mint =  await TestNftInteract.safeMint(tester1.address)
+    const nftApproval = await TestNftInteract.connect(tester1).setApprovalForAll(marketplaceAddress, true)
+    const price = ethers.utils.parseEther("10");
+
+    const listingParams = {
+        assetContract: testNft.address,
+        tokenId: 0,
+        startTime: currentTime,
+        secondsUntilEndTime: 1 * 24 * 60 * 60, //1 day
+        quantityToList: 1,
+        currencyToAccept: testToken.address,
+        reservePricePerToken: 0,
+        buyoutPricePerToken: price,
+        listingType: 0,
+      }
 
 
-//     await marketplace.buy(listingId, buyFor,quantityToBuy, currency, totalPrice);
+    const tx = await nftMarketplace.connect(tester1).createListing(listingParams);
+    const txreceipt =  await tx.wait()
+    //@ts-ignore
+    const txargs = txreceipt.events[0].args;
+    //@ts-ignore
+    const listingId = await txargs.listingId
 
-//       //check
-//       const Erc20Token = await ethers.getContractAt("ERC20", _nativeTokenWrapper);
-//       //expect that the buyer get the nft
-//     expect(NFT.ownerOf(1).to.be.equal(buyer.address))
+    /*************************** */
+    /******************** */
+    const amt = ethers.utils.parseEther("40")
+    const TestToken = await ethers.getContractFactory("TestToken");
+    const TestTokenInteract = TestToken.attach(testToken.address)
 
-//    // 5% - platfrm fee. - 5% of 1000 = 50
-//    //1000 - 50
-//     //expext that the seller gets it's money
-//     expect((await Erc20Token.balanceOf(buyer.address))).to.be.equal(950)
+    const mintToken = await TestTokenInteract.mint(tester2.address, amt)
+    const tokenApproval = await TestTokenInteract.connect(tester2).approve(marketplaceAddress, amt)
 
-//     //check that the admin get it's own commision
-//     expect(Erc20Token.balanceOf(defaultAdmin)).to.be.equal(50)
+    // define the parameters for buying the listing
+      const buyFor = tester2.address;
+      const quantityToBuy = 1;
+      const currency = testToken.address;
+      const totalPrice = price; 
 
-//     const listing = await marketplace.listings(listingId);
 
-//     //check that the listing isn't available again
-//     expect(listing.quantity).to.eq(0);
-//   });
+    await nftMarketplace.connect(tester2).buy(listingId, buyFor,quantityToBuy, currency, totalPrice);
 
-//   it("should make an offer for a direct listing", async () => {
-//     const { marketplace, defaultAdmin, NFT, tokenID , _startTime, _secondsUntilEndTime, _nativeTokenWrapper, buyer} = await loadFixture(deployMarketplace);
+   
+      //expect that the buyer get the nft
+    expect(await TestNftInteract.ownerOf(0)).to.be.equal(tester2.address)
 
-//     const listingParams = {
-//         assetContract: NFT.Address,
-//         tokenId: tokenID,
-//         quantityToList: 1,
-//         startTime: _startTime,
-//         secondsUntilEndTime: _secondsUntilEndTime,
-//         currencyToAccept: _nativeTokenWrapper,
-//         reservePricePerToken: 100,
-//         buyoutPricePerToken: 1000,
-//         listingType: 0,
-//       }
+   // 5% - platfrm fee. =  5% of 10 * 1e18 = 5 * 1e17
+   //1000 - 50
+   // lister get = 9.5*10^18
+    //expext that the seller gets it's money
+    const listerget =  ethers.utils.parseEther("9.5")
+    expect(await TestTokenInteract.balanceOf(tester1.address)).to.be.equal(listerget)
 
-//       await marketplace.createListing(listingParams);
-//       const listing = await marketplace.listings(1);
-//       // const offerParams
-//        const listingId = 1;
-//        const quantityWanted = 1;
-//        const currency = listing.currency;
-//        const pricePerToken = listing.buyoutPricePerToken;
-//        const expirationTimestamp = listing.endTime;
+    //check that the admin get it's own commision
+    const platformget =  ethers.utils.parseEther("0.5")
+    expect(await TestTokenInteract.balanceOf(deployer.address)).to.be.equal(platformget)
+
+    const listing = await nftMarketplace.listings(listingId);
+
+    //check that the listing isn't available again
+    expect(listing.quantity).to.eq(0);
+  });
+
+  it("should make an offer for a direct listing", async () => {
+    const { marketplaceAddress, deployer, testNft, testToken, tester1, tester2,currentTime, nftMarketplace} = await loadFixture(deployMarketplace);
+
+    /************************Minting and approval************* */
+    const TestNft =  await ethers.getContractFactory("TestNft")
+    const TestNftInteract = TestNft.attach(testNft.address)
+
+    const mint =  await TestNftInteract.safeMint(tester1.address)
+    const nftApproval = await TestNftInteract.connect(tester1).setApprovalForAll(marketplaceAddress, true)
+
+    const listingParams = {
+        assetContract: testNft.address,
+        tokenId: 0,
+        startTime: currentTime,
+        secondsUntilEndTime: 1 * 24 * 60 * 60, //1 day
+        quantityToList: 1,
+        currencyToAccept: testToken.address,
+        reservePricePerToken: 0,
+        buyoutPricePerToken: ethers.utils.parseEther("10"),
+        listingType: 0,
+      }
+
+
+    const tx = await nftMarketplace.connect(tester1).createListing(listingParams);
+    const txreceipt =  await tx.wait()
+    //@ts-ignore
+    const txargs = txreceipt.events[0].args;
+    //@ts-ignore
+    const listingId = await txargs.listingId
+
+      const listing = await nftMarketplace.listings(listingId);
+      const amounttopay = ethers.utils.parseEther("5");
+      /*********************************** */
+        const TestToken = await ethers.getContractFactory("TestToken");
+        const testToken2 = await TestToken.deploy();
+        await testToken2.deployed()
+        const testToken2Interact = testToken2.attach(testToken2.address)
+
+    const mintToken = await testToken2Interact.mint(tester2.address, amounttopay)
+    const tokenApproval = await testToken2Interact.connect(tester2).approve(marketplaceAddress, amounttopay)
+
+
+      // const offerParams
+       const quantityWanted = 1;
+       const currency = testToken2.address;
+       const pricePerToken = amounttopay;
+       const expirationTimestamp = listing.endTime;
   
       
-//     await marketplace.connect(buyer).offer(listingId, quantityWanted, currency, pricePerToken, expirationTimestamp);
+    await nftMarketplace.connect(tester2).offer(listingId, quantityWanted, currency, pricePerToken, expirationTimestamp);
 
-//     const offer = await marketplace.offers(listingId, buyer.address);
-//     expect(offer.pricePerToken).to.eq(pricePerToken);
-//     expect(offer.offeror).to.eq(buyer.address);
-//     expect(offer.currency).to.eq(currency);
-//     expect(offer.quantityWanted).to.eq(quantityWanted);
-//     expect(offer.expirationTimestamp).to.eq(expirationTimestamp);
-//   });
+    const offer = await nftMarketplace.offers(listingId, tester2.address);
+    expect(offer.pricePerToken).to.eq(pricePerToken);
+    expect(offer.offeror).to.eq(tester2.address);
+    expect(offer.currency).to.eq(currency);
+    expect(offer.quantityWanted).to.eq(quantityWanted);
+    expect(offer.expirationTimestamp).to.eq(expirationTimestamp);
+  });
 
 
-//   it("should accept an offer for a direct listing", async () => {
-//     const { marketplace, defaultAdmin, NFT, tokenID , _startTime, _secondsUntilEndTime, _nativeTokenWrapper, buyer} = await loadFixture(deployMarketplace);
+  it("should accept an offer for a direct listing", async () => {
+    const { marketplaceAddress, deployer, testNft, testToken, tester1, tester2,currentTime, nftMarketplace} = await loadFixture(deployMarketplace);
 
-//     const listingParams = {
-//         assetContract: NFT.Address,
-//         tokenId: tokenID,
-//         quantityToList: 1,
-//         startTime: _startTime,
-//         secondsUntilEndTime: _secondsUntilEndTime,
-//         currencyToAccept: _nativeTokenWrapper,
-//         reservePricePerToken: 100,
-//         buyoutPricePerToken: 1000,
-//         listingType: 0,
-//       }
+    /************************Minting and approval************* */
+    const TestNft =  await ethers.getContractFactory("TestNft")
+    const TestNftInteract = TestNft.attach(testNft.address)
 
-//       await marketplace.createListing(listingParams);
+    const mint =  await TestNftInteract.safeMint(tester1.address)
+    const nftApproval = await TestNftInteract.connect(tester1).setApprovalForAll(marketplaceAddress, true)
 
-//       const listing = await marketplace.listings(1);
-//       // const offerParams
-//        const listingId = 1;
-//        const quantityWanted = 1;
-//        const currency = listing.currency;
-//        const pricePerToken = listing.buyoutPricePerToken;
-//        const expirationTimestamp = listing.endTime;
+    const listingParams = {
+        assetContract: testNft.address,
+        tokenId: 0,
+        startTime: currentTime,
+        secondsUntilEndTime: 1 * 24 * 60 * 60, //1 day
+        quantityToList: 1,
+        currencyToAccept: testToken.address,
+        reservePricePerToken: 0,
+        buyoutPricePerToken: ethers.utils.parseEther("10"),
+        listingType: 0,
+      }
+
+
+    const tx = await nftMarketplace.connect(tester1).createListing(listingParams);
+    const txreceipt =  await tx.wait()
+    //@ts-ignore
+    const txargs = txreceipt.events[0].args;
+    //@ts-ignore
+    const listingId = await txargs.listingId
+
+      const amounttopay = ethers.utils.parseEther("5");
+      /*********************************** */
+        const TestToken = await ethers.getContractFactory("TestToken");
+        const testToken2 = await TestToken.deploy();
+        await testToken2.deployed()
+        const testToken2Interact = testToken2.attach(testToken2.address)
+
+    const mintToken = await testToken2Interact.mint(tester2.address, amounttopay)
+    const tokenApproval = await testToken2Interact.connect(tester2).approve(marketplaceAddress, amounttopay)
+
+      // const offerParams
+       const quantityWanted = 1;
+       const currency = testToken2.address;
+       const pricePerToken = amounttopay;
+       const expirationTimestamp = currentTime + 1 * 24 * 60 * 60;
   
       
-//     await marketplace.connect(buyer).offer(listingId, quantityWanted, currency, pricePerToken, expirationTimestamp);
-//     const offer = await marketplace.offers(listingId, buyer.address);
+    await nftMarketplace.connect(tester2).offer(listingId, quantityWanted, currency, pricePerToken, expirationTimestamp);
 
+    const offer = await nftMarketplace.offers(listingId, tester2.address);
 
-//     // try to accept the offfer from an address that's not the creator of the listing
-//     await expect(marketplace.acceptOffer(listingId, offer.offeror, offer.currency, offer.pricePerToken, { from: "0xC03b2E3BE709b96a9E71797213be58899F431943" })).to.be.reverted;
+    // try to accept the offfer from an address that's not the creator of the listing
+    await expect(nftMarketplace.connect(deployer).acceptOffer(listingId, offer.offeror, offer.currency, offer.pricePerToken)).to.be.reverted;
 
-//     await marketplace.connect(listing.tokenOwner).acceptOffer(listingId, offer.offeror, offer.currency, offer.pricePerToken);
+    await nftMarketplace.connect(tester1).acceptOffer(listingId, offer.offeror, offer.currency, offer.pricePerToken);
+    
+    const listing = await nftMarketplace.listings(listingId);
 
-//     expect(listing.quantity).to.eq(0);
+    expect(listing.quantity).to.eq(0);
 
-//     //expect that the buyer get the nft
-//     expect(NFT.ownerOf(1).to.be.equal(buyer.address))
-//   });
+    // 5% - platfrm fee. =  5% of 5 * 1e18 = 2.5 * 1e17
+   //5*1e18 - 0.25 *1e17
+   // lister get = 4.75*10^18
+    //expext that the seller gets it's money
+    const listerget =  ethers.utils.parseEther("4.75")
+    expect(await testToken2Interact.balanceOf(tester1.address)).to.be.equal(listerget)
+
+    //check that the admin get it's own commision
+    const platformget =  ethers.utils.parseEther("0.25")
+    expect(await testToken2Interact.balanceOf(deployer.address)).to.be.equal(platformget)
+
+    //expect that the buyer get the nft
+   expect(await TestNftInteract.ownerOf(0)).to.be.equal(tester2.address)
+  });
 
 
 //      // auction listingtype is 1 by default
