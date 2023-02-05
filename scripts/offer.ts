@@ -208,6 +208,7 @@ console.log("balance of tester 4: ", nftbal4)
 console.log("nft owner of token id 1: ", nftowner4)
 
 
+//offers can be cancelled for direct listing
 
 }
 
