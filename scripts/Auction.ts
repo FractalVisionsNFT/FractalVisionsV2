@@ -1,5 +1,5 @@
 import { ethers } from "hardhat";
-
+const helpers = require("@nomicfoundation/hardhat-network-helpers");
 async function main() {
 
   /*********************Deploy Forwarder*************************** */
@@ -185,15 +185,32 @@ const expirationTimestamp = listing.endTime;
 const createBid = await nftMarketplace.connect(tester2).offer(listingid, quantityWanted, currency, pricePerToken, expirationTimestamp)
 console.log("bids created successfully ", createBid)
 
-// /**********************Accept offer******************8 */
-// const offeror = tester4.address;
-// const acceptOffer = await nftMarketplace.connect(tester1).acceptOffer(listingid, offeror, currency2, pricePerToken)
+//note if the auction time has not ended and there is abid. the auction cannot be closed
+// /**********************Close Auction******************8 */
+// the winner and the lister needs to click on close auction.
+// When the auction has ended and the bidder clicks on close auction.. the nft is send to him
+//when the auction has ended and the lister clicked on close auction.. the payment is sent to him and the platform fee is sent to the platform address, the royalty payment is made also.;
+//Lets any account close an auction on behalf of either the (1) auction's creator, or (2) winning bidder.
+//            For (1): The auction creator is sent the the winning bid amount.
+//         For (2): The winning bidder is sent the auctioned NFTs.
 
-// console.log("offer accepted successfully ", acceptOffer)
+
+        // Advance time 6 days 
+        //await time.increase(time.duration.days(6));
+       await helpers.time.increase(532000);
+
+
+ const closeauctionLister = await nftMarketplace.connect(tester3).closeAuction(listingId, listing.tokenOwner)
+  console.log("Auction closed successfully for lister ", closeauctionLister)
+  const winnerDetails = await nftMarketplace.winningBid(listingId);
+  console.log("offer", winnerDetails)
+
+  const closeauctionBidder = await nftMarketplace.connect(tester3).closeAuction(listingId, winnerDetails.offeror )
+  console.log("Auction closed successfully for bidder", closeauctionBidder)
 
 
 /**************Balance Check*********************** */
-console.log("all adrresses ", deployer.address, " tester1",  tester1.address, "tester2", tester2.address, "tester3", tester3.address, "tester4", tester4.address)
+console.log("all adrresses ", deployer.address, " tester1",  tester1.address, "tester2", tester2.address)
 
 const tester1bal = await TestTokenInteract.connect(tester1).callStatic.balanceOf(tester1.address)
 
@@ -202,13 +219,13 @@ console.log("token balance of nft owner ", tester1bal)
 
 /*********** */
 const platformFeeRecipientbal = await TestTokenInteract.connect(deployer).callStatic.balanceOf(deployer.address)
-const nftbal4 = await TestNftInteract.connect(tester4).callStatic.balanceOf(tester4.address)
-const nftowner4 = await TestNftInteract.connect(tester4).callStatic.ownerOf(0)
+const nftbal = await TestNftInteract.connect(tester2).callStatic.balanceOf(tester2.address)
+const nftowner = await TestNftInteract.connect(tester2).callStatic.ownerOf(0)
 //balance should increase by 1 and nftowner should be tester4 addr
 
 console.log("Platfrom Fee Recipient Balance ", platformFeeRecipientbal)
-console.log("balance of tester 4: ", nftbal4)
-console.log("nft owner of token id 1: ", nftowner4)
+console.log("balance of bidder: ", nftbal)
+console.log("nft owner of token id 1: ", nftowner)
 
 
 

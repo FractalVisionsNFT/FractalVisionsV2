@@ -1,0 +1,48 @@
+A breakdown of how the contract works.
+the marketplace has two types of listing
+0) Direct Listing
+1) Auction Listing
+
+
+when creating listing, the listing type for Direct Listing is 0, and the listingtype for auction listing is 1.
+    Direct Listing
+With Direct listing- the nft is still in the address of the lister
+the nft is only transferred out when a 
+1) buyer buys(pays the exact price) the nft 
+2) buyer creates an offer and the lister accept the offer
+*with buy(the nft is transfered automatically)
+buy - when a user buys an nft, the nft is paid for in the lister currency and in the exact price of the nft 
+offer - offers can be created both in the lister currency or in any currency of the buyer choice and also in any amount
+*with offer(the nft is transfered only when the lister accepts the offer)
+*  if a buyer makes
+     *       makes two offers to the same direct listing, the last offer is counted as the buyer's offer to that listing.
+Note:  direct listing can be edited whenever.
+
+            Auction Listing
+The listingtype for auction listing is 1.
+With Auction Listing - THe nft is transferred from the lister and escrowed by the marketplace
+A user can only bid in the currency specified by the lister and also in the amount greater than or equals to the _reservePricePerToken
+if
+     *       `buyoutPricePerToken` is greater than 0, and a bidder's bid is at least as great as
+     *           `buyoutPricePerToken * quantityToList`, the bidder wins the auction, and the auction is closed.
+
+-note if the auction endtime has not reached and there is a bid. the auction cannot be closed.
+if there is no bid and the auction endtime has not reached, the auction can be close(only by the lister)
+if there is no bid and the auction endtime has reached, the auction can be close(only by the lister)
+if the auction has not started, it can be closed(ny the lister)
+
+transfer of assets is not done automatically
+when auction end time has elapsed. There are two thing to be done to the closeAuction(for asset to be trasnferred to the lister and highest bidder)
+any account can close an auction on behalf of either the (1) auction's creator, or (2) winning bidder.
+    For (1): The auction creator is sent the the winning bid amount.
+    For (2): The winning bidder is sent the auctioned NFTs.
+so the close auctions needs to be called twice with the address of the lister and the address of the higest bidder on the same listingId
+
+each newbid must be bidbuffer greater than the previous bid i.e 5% greater than the previous winning bid
+each time a newbid is created the previous bidder bid is sent back to him/her
+
+if a buyer/bidder  pays the exact buyoutPricePerToken. the nft is sent to him automaticALLY and the auction is closed for him, the auction will need to be closed for lister so
+that the lister can get his fund and the platform owner will get his own shares of the sales.
+
+if a bidder creates a bid when it's less than the time buffer to the end of the auction, the timebuffer is added to the end time of the auction
+//timeBuffer = 15 minute 
