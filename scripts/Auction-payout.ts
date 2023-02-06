@@ -178,7 +178,7 @@ const listing = await nftMarketplace.listings(listingId);
 const listingid = listingId ;
 const quantityWanted = listing.quantity;
 const currency = listing.currency;
-const pricePerToken = ethers.utils.parseEther("5");
+const pricePerToken = ethers.utils.parseEther("20");
 const expirationTimestamp = listing.endTime;
 
 
@@ -197,17 +197,11 @@ console.log("bids created successfully ", createBid)
 
         // Advance time 6 days 
         //await time.increase(time.duration.days(6));
-       await helpers.time.increase(532000);
+       //await helpers.time.increase(532000);
 
 
  const closeauctionLister = await nftMarketplace.connect(tester3).closeAuction(listingId, listing.tokenOwner)
   console.log("Auction closed successfully for lister ", closeauctionLister)
-  const winnerDetails = await nftMarketplace.winningBid(listingId);
-  console.log("offer", winnerDetails)
-
-  const closeauctionBidder = await nftMarketplace.connect(tester3).closeAuction(listingId, winnerDetails.offeror )
-  console.log("Auction closed successfully for bidder", closeauctionBidder)
-
 
 /**************Balance Check*********************** */
 console.log("all adrresses ", deployer.address, " tester1",  tester1.address, "tester2", tester2.address)
