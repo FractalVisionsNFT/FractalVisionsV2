@@ -79,15 +79,13 @@ async function main( ) {
 
     /***********************Get the details of all NFT Listed**********************************88 */
         //to get the total number of nft listed on the platform(lenght)
-        const listednft: any;
-        let i;
-        for (i = 0, i < getTotalLenghtOfNft, i++){
+    
 
-            const getAllListing = await marketplace.connect(impersonatedListerAddress).listings(i);
-            listednft.push(getAllListing);
-        }
+            // const getAllListing = await marketplace.connect(impersonatedListerAddress).listings(i);
+            // listednft.push(getAllListing);
+        
 
-        console.log("listing result", listednft);
+        //console.log("listing result", listednft);
 
 
     }

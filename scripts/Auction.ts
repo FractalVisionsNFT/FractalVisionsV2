@@ -122,83 +122,86 @@ console.log("approval succesfull ", nftApproval)
 
 /******************** */
 const amt = ethers.utils.parseEther("40")
-// const TestTokenInteract = TestToken.attach(testToken.address)
+const TestTokenInteract = TestToken.attach(testToken.address)
 
-// const mintToken = await TestTokenInteract.mint(tester2.address, amt)
+const mintToken = await TestTokenInteract.mint(tester2.address, amt)
 
-// const tokenApproval = await TestTokenInteract.connect(tester2).approve(marketplaceAddress, amt)
+const tokenApproval = await TestTokenInteract.connect(tester2).approve(marketplaceAddress, amt)
 
-// console.log("token approval ", tokenApproval)
+console.log("token approval ", tokenApproval)
 
 
-/****************************************************************************888 */
-/********************create listing and offer listing method***************8 */
+/*****************************************************************************/
+/********************create listing and Bid listing method****************/
 
 /********** */
 const currentTime = (await ethers.provider.getBlock("latest")).timestamp
 console.log("latest ", currentTime)
 
-const listingParams2 = {
+// listingtype 1 = Direct
+//listingtype 0 = auction
+
+const listingParams = {
   assetContract: testNft.address,
   tokenId: 0,
   startTime: currentTime,
-  secondsUntilEndTime: 3600,
+  secondsUntilEndTime: 432000, // 5 days
   quantityToList: 1,
   currencyToAccept: testToken.address,
-  reservePricePerToken: 0,
-  buyoutPricePerToken: ethers.utils.parseEther("20"),
-  listingType: 0
+  reservePricePerToken: ethers.utils.parseEther("1"), // starting bidding price
+  buyoutPricePerToken: ethers.utils.parseEther("20"), // buyout price //the auction will end immediately if a user pays this price.
+  listingType: 1
 }
-const c8list2 = await nftMarketplace.connect(tester1).createListing(listingParams2)
-console.log("create listen 2 successfull ", c8list2)
+const c8list = await nftMarketplace.connect(tester1).createListing(listingParams)
+console.log("create listing successfull", c8list )
+const txreceipt =  await c8list.wait()
+console.log("tx receipt", txreceipt)
+//@ts-ignore
+const txargs = txreceipt.events[1].args;
+console.log("tx txargs", txargs)
+//@ts-ignore
+const listingId = await txargs.listingId
 
 
-/*****************Create 0ffer***************** */
-/*******new token contr**** */
-const TestToken2 = await ethers.getContractFactory("TestToken");
-const testToken2 = await TestToken2.deploy();
-
-await testToken2.deployed();
-
-console.log(`testToken2 contract is deployed to ${testToken2.address}`);
-
-/********** */
-const TestTokenInteract2 = TestToken2.attach(testToken2.address)
-const mint2Token = await TestTokenInteract2.mint(tester4.address, amt)
-
-const token2Approval = await TestTokenInteract2.connect(tester4).approve(marketplaceAddress, amt)
-
-console.log("token 2 approval", token2Approval)
-
-/*************offer*******8 */
-//offer params
-const listingid = 0 ;
-const quantityWanted = 1;
-const currency2 = testToken2.address;
-const pricePerToken = ethers.utils.parseEther("15");
-const expirationTimestamp = Date.now() + 6400;
+/*****************Create Bids***************** */
+// bids are created in the currency accepted by the lister
+// Bids cannot be canceled once they've been made.
 
 
-const c8offer = await nftMarketplace.connect(tester4).offer(listingid, quantityWanted, currency2, pricePerToken, expirationTimestamp)
-console.log("offer created successfully ", c8offer)
+/*************Bids******* */
+//Bid params
 
-/**********************Accept offer******************8 */
-const offeror = tester4.address;
-const acceptOffer = await nftMarketplace.connect(tester1).acceptOffer(listingid, offeror, currency2, pricePerToken)
+//getting listing parameter
+const listing = await nftMarketplace.listings(listingId);
 
-console.log("offer accepted successfully ", acceptOffer)
+
+const listingid = listingId ;
+const quantityWanted = listing.quantity;
+const currency = listing.currency;
+const pricePerToken = ethers.utils.parseEther("5");
+const expirationTimestamp = listing.endTime;
+
+
+const createBid = await nftMarketplace.connect(tester2).offer(listingid, quantityWanted, currency, pricePerToken, expirationTimestamp)
+console.log("bids created successfully ", createBid)
+
+// /**********************Accept offer******************8 */
+// const offeror = tester4.address;
+// const acceptOffer = await nftMarketplace.connect(tester1).acceptOffer(listingid, offeror, currency2, pricePerToken)
+
+// console.log("offer accepted successfully ", acceptOffer)
 
 
 /**************Balance Check*********************** */
 console.log("all adrresses ", deployer.address, " tester1",  tester1.address, "tester2", tester2.address, "tester3", tester3.address, "tester4", tester4.address)
 
-const tester1bal = await TestTokenInteract2.connect(tester1).callStatic.balanceOf(tester1.address)
+const tester1bal = await TestTokenInteract.connect(tester1).callStatic.balanceOf(tester1.address)
 
 console.log("token balance of nft owner ", tester1bal)
 //should get the money 
 
 /*********** */
-const platformFeeRecipientbal = await TestTokenInteract2.connect(deployer).callStatic.balanceOf(deployer.address)
+const platformFeeRecipientbal = await TestTokenInteract.connect(deployer).callStatic.balanceOf(deployer.address)
 const nftbal4 = await TestNftInteract.connect(tester4).callStatic.balanceOf(tester4.address)
 const nftowner4 = await TestNftInteract.connect(tester4).callStatic.ownerOf(0)
 //balance should increase by 1 and nftowner should be tester4 addr
@@ -208,7 +211,6 @@ console.log("balance of tester 4: ", nftbal4)
 console.log("nft owner of token id 1: ", nftowner4)
 
 
-//offers can be cancelled for direct listing
 
 }
 
