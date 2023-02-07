@@ -120,7 +120,7 @@ await tWRegistryInteract.grantRole(opetratorRole,tWFactory.address)
 
 
 
-  it("should create a listing", async () => {
+  it("should create a Direct listing", async () => {
     const { marketplaceAddress, deployer, testNft, testToken, tester1, tester2,currentTime, nftMarketplace} = await loadFixture(deployMarketplace);
 
     /************************Minting and approval************* */
@@ -467,7 +467,49 @@ await tWRegistryInteract.grantRole(opetratorRole,tWFactory.address)
 
 //      // auction listingtype is 1 by default
 //     // Direct listingtype is 0 by default
-//   //this check is for an auction not for direct listing to be copied back to auction test page
+it("should create a Auction listing", async () => {
+  const { marketplaceAddress, deployer, testNft, testToken, tester1, tester2,currentTime, nftMarketplace} = await loadFixture(deployMarketplace);
+
+  /************************Minting and approval************* */
+  const TestNft =  await ethers.getContractFactory("TestNft")
+  const TestNftInteract = TestNft.attach(testNft.address)
+
+  const mint =  await TestNftInteract.safeMint(tester1.address)
+  const nftApproval = await TestNftInteract.connect(tester1).setApprovalForAll(marketplaceAddress, true)
+  const price = ethers.utils.parseEther("10");
+
+  const listingParams = {
+      assetContract: testNft.address,
+      tokenId: 0,
+      startTime: currentTime,
+      secondsUntilEndTime: 1 * 24 * 60 * 60, //1 day
+      quantityToList: 1,
+      currencyToAccept: testToken.address,
+      reservePricePerToken: 0,
+      buyoutPricePerToken: price,
+      listingType: 1,
+    }
+
+
+  const tx = await nftMarketplace.connect(tester1).createListing(listingParams);
+  const txreceipt =  await tx.wait()
+  //@ts-ignore
+  const txargs = txreceipt.events[1].args;
+  //@ts-ignore
+  const listingId = await txargs.listingId
+
+  const listing = await nftMarketplace.listings(listingId);
+  expect(listing.tokenOwner).to.eq(tester1.address);
+  expect(listing.assetContract).to.eq(testNft.address);
+  expect(listing.quantity).to.eq(1);
+  expect(listing.buyoutPricePerToken).to.eq(price);
+  expect(listing.startTime).to.be.within(currentTime, currentTime +10);
+  expect(listing.endTime).to.be.within(currentTime + (1 * 24 * 60 * 60), currentTime + (1 * 24 * 60 * 60) + 10);
+  expect(listing.listingType).to.equal(1);
+});
+
+
+
 //   it("should close an auction listing", async () => {
 //     const { marketplace, defaultAdmin, NFT, tokenID , _startTime, _secondsUntilEndTime, _nativeTokenWrapper, buyer} = await loadFixture(deployMarketplace);
 
