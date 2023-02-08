@@ -46,3 +46,7 @@ that the lister can get his fund and the platform owner will get his own shares 
 
 if a bidder creates a bid when it's less than the time buffer to the end of the auction, the timebuffer is added to the end time of the auction
 //timeBuffer = 15 minute 
+
+* THe auction can be created in two ways for lister
+1) auction with buyout:- if a user pays the buyout amount the auction will closed automatically and no bid will be accepted again
+2) auction without buyout:- auction only close when the endtime of the auction has reached. so the bids can keep going up
