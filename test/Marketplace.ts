@@ -837,7 +837,7 @@ it("should close an auction listing(if auction has not started and revert all bi
      assetContract: testNft.address,
      tokenId: 0,
      //start in the future
-     startTime: currentTime + (5  * 40 * 60 * 60),
+     startTime: currentTime,
      secondsUntilEndTime: 1 * 24 * 60 * 60, //1 day
      quantityToList: 1,
      currencyToAccept: testToken.address,
@@ -857,48 +857,34 @@ it("should close an auction listing(if auction has not started and revert all bi
 
  const listing = await nftMarketplace.listings(listingId);
 
-   //It should not revert if the auction has not started
+    // advance time by one hour and mine a new block
+    await helpers.time.increase(3600);
 
+   //*************It should not revert if the auction has not started*********//
    //should revert cos tester2 is not the lister
    await expect(nftMarketplace.connect(tester2).closeAuction(listingId, listing.tokenOwner)).to.be.revertedWith("caller is not the listing creator.");
 
    //shouldn't revert cos this is the lister
    expect(await nftMarketplace.connect(tester1).closeAuction(listingId, listing.tokenOwner)).not.to.be.reverted;
 
-   // advance time by one hour and mine a new block
-   await helpers.time.increase(3600);
 
-  //It should not revert if the auction has started and has no bid
- //  expect(await nftMarketplace.connect(tester3).closeAuction(listingId, listing.tokenOwner)).not.to.be.reverted;
+    // const offerParams
+    const quantityWanted = listing.quantity;
+    const currency = listing.currency;
+    const pricePerToken = ethers.utils.parseEther("20");
+    const expirationTimestamp = listing.endTime;
 
-// // advance time by one hour and mine a new block
-//     await helpers.time.increase(3600);
+  //revert all bid
+  await expect(nftMarketplace.connect(tester2).offer(listingId, quantityWanted, currency, pricePerToken, expirationTimestamp)).to.be.revertedWith("DNE");
 
-  //   //time has been increased but no bid and the lister address is passed as parameter
-  //   expect(marketplace.closeAuction(listingId, listerAddress)).not.to.be.reverted;
+  const listingafter = await nftMarketplace.listings(listingId);
+  //asset is null
+  expect(listingafter.assetContract).to.eq(ethers.constants.AddressZero);
+  expect(listingafter.quantity).to.eq(0);
 
-
-
-  //     //OFFER PARAMETERS
-  //   const quantityWanted = 1;
-  //   const currency = listing.currency;
-  //   const pricePerToken = listing.buyoutPricePerToken;
-  //   const expirationTimestamp = listing.endTime;
-
-  // await marketplace.connect(buyer).offer(listingId, quantityWanted, currency, pricePerToken, expirationTimestamp);
-
-  // //The auction ahoukd revert there is a bid.
-  // expect(marketplace.closeAuction(listingId, listerAddress)).to.be.reverted;
-
-  // // advance time by one hour and mine a new block
-  // await helpers.time.increase(listing.endTime);
-
-  //   //The auction should not revert cos the auction has ended
-  //   expect(marketplace.closeAuction(listingId, highesbidderAddress)).not.to.be.reverted;
-
-  //   expect(listing.quantity).to.eq(0);
-  //   expect(winningBid.pricePerToken).to.eq(pricePerToken);
-  //   expect(winningBid.offeror).to.eq(highesbidderAddress);
+  const offer = await nftMarketplace.winningBid(listingId);
+  expect(offer.offeror).to.eq(ethers.constants.AddressZero);
+  
   });
 });
 
