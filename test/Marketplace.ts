@@ -513,7 +513,7 @@ it("should create a Auction listing", async () => {
   expect(listing.listingType).to.equal(1);
 });
 
-it("multiple bid should be make(auctioin without buyoutprice)", async () => {
+it("multiple bid should be make(test for bid)", async () => {
   const { marketplaceAddress, deployer, testNft, testToken, tester1, tester2,currentTime, nftMarketplace, tester3} = await loadFixture(deployMarketplace);
 
   /************************Minting and approval************* */
@@ -543,8 +543,8 @@ it("multiple bid should be make(auctioin without buyoutprice)", async () => {
       secondsUntilEndTime: 1 * 24 * 60 * 60, //1 day
       quantityToList: 1,
       currencyToAccept: testToken.address,
-      reservePricePerToken: 0,
-      buyoutPricePerToken: ethers.utils.parseEther("2"),
+      reservePricePerToken: ethers.utils.parseEther("0.5"),
+      buyoutPricePerToken: ethers.utils.parseEther("20"),
       listingType: 1,
     }
 
@@ -560,7 +560,7 @@ it("multiple bid should be make(auctioin without buyoutprice)", async () => {
   expect(listing.tokenOwner).to.eq(tester1.address);
   expect(listing.assetContract).to.eq(testNft.address);
   expect(listing.quantity).to.eq(1);
-  expect(listing.buyoutPricePerToken).to.eq(ethers.utils.parseEther("2"));
+  expect(listing.buyoutPricePerToken).to.eq(ethers.utils.parseEther("20"));
   expect(listing.startTime).to.be.within(currentTime, currentTime +10);
   expect(listing.endTime).to.be.within(currentTime + (1 * 24 * 60 * 60), currentTime + (1 * 24 * 60 * 60) + 10);
   expect(listing.listingType).to.equal(1);
@@ -569,29 +569,151 @@ it("multiple bid should be make(auctioin without buyoutprice)", async () => {
         // const offerParams
         const quantityWanted = listing.quantity;
         const currency = listing.currency;
-        const pricePerToken = ethers.utils.parseEther("5");
+        const pricePerToken = ethers.utils.parseEther("0.5");
         const expirationTimestamp = listing.endTime;
-   
-       
+
+      //bid by tester 2 
      await nftMarketplace.connect(tester2).offer(listingId, quantityWanted, currency, pricePerToken, expirationTimestamp);
  
-     const offer = await nftMarketplace.offers(listingId, tester2.address);
-     //expect(offer.pricePerToken).to.eq(pricePerToken);
-     expect(offer.offeror).to.eq(tester2.address);
-     expect(offer.currency).to.eq(currency);
-     expect(offer.quantityWanted).to.eq(quantityWanted);
-     expect(offer.expirationTimestamp).to.eq(expirationTimestamp);
+     const bid1 = await nftMarketplace.callStatic.winningBid(listingId);
+     expect(bid1.pricePerToken).to.eq(pricePerToken);
+     expect(bid1.offeror).to.eq(tester2.address);
+     expect(bid1.currency).to.eq(currency);
+     expect(bid1.quantityWanted).to.eq(quantityWanted);
+     expect(bid1.expirationTimestamp).to.eq(expirationTimestamp);
+    
 
-     //bal when listing
-     const bal=  ethers.utils.parseEther("35")
-     expect(TestTokenInteract.balanceOf(tester2.address)).to.eq(bal);
+     //bal after listing(40 - 0.5)
+     const bal=  ethers.utils.parseEther("39.5")
+     expect(await TestTokenInteract.balanceOf(tester2.address)).to.eq(bal);
 
-     await nftMarketplace.connect(tester3).offer(listingId, quantityWanted, currency, pricePerToken, expirationTimestamp);
+     //new bid by tester 3
+     await nftMarketplace.connect(tester3).offer(listingId, quantityWanted, currency, ethers.utils.parseEther("1"), expirationTimestamp);
 
-     //bal when another user makes a bid(gets initial bid back)
+     //bal when another user makes a bid(gets initial bid back)(39.5 + 0.5)
      const newBal = ethers.utils.parseEther("40")
-     expect(TestTokenInteract.balanceOf(tester2.address)).to.eq(newBal);
+     expect(await TestTokenInteract.balanceOf(tester2.address)).to.eq(newBal);
 
+
+     const bid2 = await nftMarketplace.callStatic.winningBid(listingId);
+     expect(bid2.pricePerToken).to.eq(ethers.utils.parseEther("1"));
+     expect(bid2.offeror).to.eq(tester3.address);
+     expect(bid2.currency).to.eq(currency);
+     expect(bid2.quantityWanted).to.eq(quantityWanted);
+     expect(bid2.expirationTimestamp).to.eq(expirationTimestamp);
+
+     await helpers.time.increase(532000);
+
+     const winnerDetails = await nftMarketplace.winningBid(listingId);
+     await nftMarketplace.connect(tester3).closeAuction(listingId, winnerDetails.offeror)
+
+     expect(await TestNftInteract.callStatic.balanceOf(tester3.address)).to.eq(1);
+     expect(await TestNftInteract.callStatic.ownerOf(0)).to.be.equal(tester3.address)
+    
+     await nftMarketplace.connect(tester3).closeAuction(listingId, listing.tokenOwner)
+
+     //get 5% of the sales price(5% 0f 1 ether) platform fee bal
+     const deployerbal = ethers.utils.parseEther("0.05")
+     expect(await TestTokenInteract.connect(deployer).balanceOf(deployer.address)).to.be.equal(deployerbal)
+
+     //get the money paid(1 - 5% of 1) lister bal
+     const listerbal = ethers.utils.parseEther("0.95")
+     expect(await TestTokenInteract.connect(deployer).balanceOf(tester1.address)).to.be.equal(listerbal)
+
+});
+
+
+it("multiple bid should be make(test for buyout)", async () => {
+  const { marketplaceAddress, deployer, testNft, testToken, tester1, tester2,currentTime, nftMarketplace, tester3} = await loadFixture(deployMarketplace);
+
+  /************************Minting and approval************* */
+  const TestNft =  await ethers.getContractFactory("TestNft")
+  const TestNftInteract = TestNft.attach(testNft.address)
+
+  const mint =  await TestNftInteract.safeMint(tester1.address)
+  const nftApproval = await TestNftInteract.connect(tester1).setApprovalForAll(marketplaceAddress, true)
+ 
+  /*************** */
+      /******************** */
+      const amt = ethers.utils.parseEther("40")
+      const TestToken = await ethers.getContractFactory("TestToken");
+      const TestTokenInteract = TestToken.attach(testToken.address)
+
+    //mimt
+      await TestTokenInteract.mint(tester3.address, amt)
+      const mintToken = await TestTokenInteract.mint(tester2.address, amt)
+
+      //Approve
+      await TestTokenInteract.connect(tester3).approve(marketplaceAddress, amt)
+      const tokenApproval = await TestTokenInteract.connect(tester2).approve(marketplaceAddress, amt)
+
+  const listingParams = {
+      assetContract: testNft.address,
+      tokenId: 0,
+      startTime: currentTime,
+      secondsUntilEndTime: 1 * 24 * 60 * 60, //1 day
+      quantityToList: 1,
+      currencyToAccept: testToken.address,
+      reservePricePerToken: ethers.utils.parseEther("0.5"),
+      buyoutPricePerToken: ethers.utils.parseEther("20"),
+      listingType: 1,
+    }
+
+
+  const tx = await nftMarketplace.connect(tester1).createListing(listingParams);
+  const txreceipt =  await tx.wait()
+  //@ts-ignore
+  const txargs = txreceipt.events[1].args;
+  //@ts-ignore
+  const listingId = await txargs.listingId
+
+  const listing = await nftMarketplace.listings(listingId);
+  expect(listing.tokenOwner).to.eq(tester1.address);
+  expect(listing.assetContract).to.eq(testNft.address);
+  expect(listing.quantity).to.eq(1);
+  expect(listing.buyoutPricePerToken).to.eq(ethers.utils.parseEther("20"));
+  expect(listing.startTime).to.be.within(currentTime, currentTime +10);
+  expect(listing.endTime).to.be.within(currentTime + (1 * 24 * 60 * 60), currentTime + (1 * 24 * 60 * 60) + 10);
+  expect(listing.listingType).to.equal(1);
+
+
+    // const offerParams
+    const quantityWanted = listing.quantity;
+    const currency = listing.currency;
+    const pricePerToken = ethers.utils.parseEther("20");
+    const expirationTimestamp = listing.endTime;
+
+  //bid by tester 2 
+  await nftMarketplace.connect(tester2).offer(listingId, quantityWanted, currency, pricePerToken, expirationTimestamp);
+
+  const offer = await nftMarketplace.winningBid(listingId);
+  expect(offer.pricePerToken).to.eq(pricePerToken);
+  expect(offer.offeror).to.eq(tester2.address);
+  expect(offer.currency).to.eq(currency);
+  //the offer has been make since it is the buyout price, the nft is tranfered and the quantitywanted is set to 0
+  expect(offer.quantityWanted).to.eq(0);
+  expect(offer.expirationTimestamp).to.eq(expirationTimestamp);
+
+
+  //bal after listing(40 - 20)
+  const bal=  ethers.utils.parseEther("20")
+  expect(await TestTokenInteract.balanceOf(tester2.address)).to.eq(bal);
+
+  //it should revert because the nft has been bought with the buyoutprice
+  await expect(nftMarketplace.connect(tester3).offer(listingId, quantityWanted, currency, ethers.utils.parseEther("1"), expirationTimestamp)).to.be.revertedWith("inactive listing.");
+
+  expect(await TestNftInteract.callStatic.balanceOf(tester2.address)).to.eq(1);
+  expect(await TestNftInteract.callStatic.ownerOf(0)).to.be.equal(tester2.address)
+
+  await nftMarketplace.connect(tester1).closeAuction(listingId, listing.tokenOwner)
+
+  //get 5% of the sales price(5% 0f 20 ether) platform fee bal
+  const deployerbal = ethers.utils.parseEther("1")
+  expect(await TestTokenInteract.connect(deployer).balanceOf(deployer.address)).to.be.equal(deployerbal)
+
+  //get the money paid(20 - 5% of 20) lister bal
+  const listerbal = ethers.utils.parseEther("19")
+  expect(await TestTokenInteract.connect(deployer).balanceOf(tester1.address)).to.be.equal(listerbal)
 
 
 });
